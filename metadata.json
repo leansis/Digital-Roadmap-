@@ -1,0 +1,5 @@
+{
+  "name": "Digital Roadmap!",
+  "description": "App para cargar un maestro de procesos desde Excel, generar una tabla editable y una visualización de tipo proceso cheurón con oportunidades y prioridades.",
+  "requestFramePermissions": []
+}

@@ -1,0 +1,77 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users/{userId}/companies
+    // Document ID: {companyId}
+    // Fields:
+    //   - name: string (required)
+    //   - activities: list (optional)
+    //   - processes: list (optional)
+    //   - opportunities: list (optional)
+    //   - applications: list (optional)
+    //   - createdAt: string (optional)
+    //   - updatedAt: string (optional)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+             (request.auth.token.email != null && 
+              (request.auth.token.email.lower() == 'leansisproductivity@gmail.com' ||
+               request.auth.token.email.lower().matches(".*@sgs\\.com$")));
+    }
+
+    function isSGSUser() {
+      return isAuthenticated() && 
+             request.auth.token.email != null && 
+             request.auth.token.email.lower().matches(".*@sgs\\.com$");
+    }
+
+    function isValidCompanyData(data) {
+      return data.keys().hasAll(['name']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             (!('activities' in data) || data.activities is list) &&
+             (!('processes' in data) || data.processes is list) &&
+             (!('opportunities' in data) || data.opportunities is list) &&
+             (!('applications' in data) || data.applications is list) &&
+             (!('updatedAt' in data) || data.updatedAt is string) &&
+             (!('createdAt' in data) || data.createdAt is string) &&
+             (!('isShared' in data) || data.isShared is bool) &&
+             (!('sharedAt' in data) || data.sharedAt is string) &&
+             (!('sharedBy' in data) || data.sharedBy is string);
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId) || isAdmin();
+      
+      match /companies/{companyId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if (isOwner(userId) || isAdmin()) && isValidCompanyData(request.resource.data);
+        allow update: if (isOwner(userId) || isAdmin()) && isValidCompanyData(request.resource.data);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    match /shared_companies/{companyId} {
+      allow read: if isAuthenticated();
+      allow create, delete: if isAdmin();
+      allow update: if (isSGSUser() || isAdmin()) && isValidCompanyData(request.resource.data);
+    }
+  }
+}

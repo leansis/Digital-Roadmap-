@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+.chevron-middle {
+  clip-path: polygon(0 0, calc(100% - 1.5rem) 0, 100% 50%, calc(100% - 1.5rem) 100%, 0 100%, 1.5rem 50%);
+}
+
+.chevron-first {
+  clip-path: polygon(0 0, calc(100% - 1.5rem) 0, 100% 50%, calc(100% - 1.5rem) 100%, 0 100%);
+}
+
+.chevron-last {
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 1.5rem 50%);
+}
+
+.chevron-single {
+  clip-path: none;
+}
+

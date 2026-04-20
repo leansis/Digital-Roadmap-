@@ -1,0 +1,94 @@
+{
+  "entities": {
+    "Activity": {
+      "title": "Activity",
+      "description": "A high-level activity in the process map.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "order": { "type": "integer" }
+      },
+      "required": ["id", "name", "order"]
+    },
+    "Process": {
+      "title": "Process",
+      "description": "A specific process within an activity.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "activityId": { "type": "string" },
+        "name": { "type": "string" },
+        "order": { "type": "integer" },
+        "applicationIds": { 
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "required": ["id", "activityId", "name", "order", "applicationIds"]
+    },
+    "Opportunity": {
+      "title": "Opportunity",
+      "description": "A digital transformation opportunity.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "processId": { "type": "string" },
+        "name": { "type": "string" },
+        "priority": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "impact": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "difficulty": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "status": { 
+          "type": "string",
+          "enum": ["Planificado", "En curso", "Finalizada", "No priorizado", "Tests"]
+        },
+        "proposedBy": { "type": "string" },
+        "createdBy": { "type": "string" },
+        "notes": { "type": "string" }
+      },
+      "required": ["id", "processId", "name", "priority", "impact", "difficulty", "status"]
+    },
+    "Application": {
+      "title": "Application",
+      "description": "A software application used in processes.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" }
+      },
+      "required": ["id", "name"]
+    },
+    "CompanyData": {
+      "title": "CompanyData",
+      "description": "Stores the digital roadmap data for a specific company.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "activities": {
+          "type": "array",
+          "items": { "$ref": "#/entities/Activity" }
+        },
+        "processes": {
+          "type": "array",
+          "items": { "$ref": "#/entities/Process" }
+        },
+        "opportunities": {
+          "type": "array",
+          "items": { "$ref": "#/entities/Opportunity" }
+        },
+        "applications": {
+          "type": "array",
+          "items": { "$ref": "#/entities/Application" }
+        },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/companies/{companyId}": {
+      "schema": { "$ref": "#/entities/CompanyData" },
+      "description": "A company's roadmap data scoped to the user"
+    }
+  }
+}
