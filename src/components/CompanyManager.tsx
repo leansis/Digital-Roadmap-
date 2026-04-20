@@ -27,8 +27,9 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ user, onSelect, 
   const [editingName, setEditingName] = useState('');
   const [isSharing, setIsSharing] = useState<string | null>(null);
 
-  const isSGSUser = user.email?.endsWith('@sgs.com');
-  const isAdmin = user.email?.toLowerCase() === 'leansisproductivity@gmail.com';
+  const userEmailLower = user.email?.toLowerCase();
+  const isSGSUser = userEmailLower?.endsWith('@sgs.com');
+  const isAdmin = userEmailLower === 'leansisproductivity@gmail.com';
 
   useEffect(() => {
     // Listen to personal companies
@@ -46,9 +47,9 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ user, onSelect, 
       setLoading(false);
     });
 
-    // Listen to shared companies if SGS user
+    // Listen to shared companies if SGS user or Admin
     let unsubscribeShared: (() => void) | undefined;
-    if (isSGSUser) {
+    if (isSGSUser || isAdmin) {
       const sharedQ = collection(db, 'shared_companies');
       unsubscribeShared = onSnapshot(sharedQ, (snapshot) => {
         const comps: Company[] = [];
@@ -65,7 +66,10 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ user, onSelect, 
       unsubscribePersonal();
       if (unsubscribeShared) unsubscribeShared();
     };
-  }, [user, isSGSUser]);
+  }, [user, isSGSUser, isAdmin]);
+
+  // Filter out personal companies that are already shown in shared
+  const personalCompanies = companies.filter(c => !sharedCompanies.some(sc => sc.id === c.id));
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -187,8 +191,8 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ user, onSelect, 
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Shared SGS Company Card */}
-          {isSGSUser && sharedCompanies.map(company => (
+          {/* Shared Companies Section (Visible to SGS and Admins) */}
+          {(isSGSUser || isAdmin) && sharedCompanies.map(company => (
             <div 
               key={company.id}
               onClick={() => onSelect(company.id, true)}
@@ -199,14 +203,14 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ user, onSelect, 
                   <Building2 className="w-6 h-6" />
                 </div>
                 <div className="px-2 py-1 bg-white/20 rounded text-[10px] font-bold uppercase tracking-wider">
-                  Compartida (SGS)
+                  {isAdmin ? 'Empresa Global (SGS)' : 'Compartida (SGS)'}
                 </div>
               </div>
               <h3 className="text-xl font-bold mb-1 truncate" title={company.name}>
                 {company.name}
               </h3>
               <p className="text-sm text-indigo-100 mt-auto pt-4">
-                Acceso corporativo para @sgs.com
+                {isAdmin ? 'Acceso de administrador global' : 'Acceso corporativo para @sgs.com'}
               </p>
             </div>
           ))}
@@ -236,8 +240,8 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ user, onSelect, 
             </form>
           </div>
 
-          {/* Company Cards */}
-          {companies.map(company => (
+          {/* Personal Company Cards */}
+          {personalCompanies.map(company => (
             <div 
               key={company.id}
               onClick={() => onSelect(company.id)}
