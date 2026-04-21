@@ -45,6 +45,8 @@ export const ImpactDifficultyMatrix: React.FC<ImpactDifficultyMatrixProps> = ({ 
     return data.activities.find(a => a.id === process.activityId)?.name || 'Actividad Desconocida';
   };
 
+  const rankedOpportunities = [...data.opportunities].sort((a, b) => b.priority - a.priority);
+
   return (
     <div className={`bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col ${isPrintMode ? 'h-full shadow-none border-none p-0' : 'h-[calc(100vh-8rem)]'}`}>
       <div className={`mb-6 w-full text-left flex justify-between items-end ${isPrintMode ? 'print:hidden' : ''}`}>
@@ -139,21 +141,24 @@ export const ImpactDifficultyMatrix: React.FC<ImpactDifficultyMatrixProps> = ({ 
                 const offset = siblings.length > 1 ? (index - (siblings.length - 1) / 2) * offsetSize : 0;
 
                 const isSelected = selectedOpp?.id === opp.id;
-                const dotSize = isPrintMode ? 'w-5 h-5 -ml-2.5 -mb-2.5' : 'w-4 h-4 -ml-2 -mb-2';
+                const dotSize = isPrintMode ? 'w-6 h-6 -ml-3 -mb-3 text-[10px]' : 'w-5 h-5 -ml-2.5 -mb-2.5 text-[9px]';
+                const rank = rankedOpportunities.findIndex(o => o.id === opp.id) + 1;
 
                 return (
                   <button
                     key={opp.id}
                     onClick={() => !isPrintMode && setSelectedOpp(opp)}
-                    className={`absolute ${dotSize} rounded-full border-2 transition-all transform ${!isPrintMode ? 'hover:scale-150 hover:z-10' : ''} ${
+                    className={`absolute ${dotSize} rounded-full border border-white transition-all transform flex items-center justify-center font-bold text-white shadow-sm ${!isPrintMode ? 'hover:scale-[1.3] hover:z-30' : 'print:border-white print:shadow-none bg-opacity-90'} ${
                       getStatusColor(opp.status, isSelected)
-                    } print:border-white print:shadow-none`}
+                    }`}
                     style={{ 
                       left: `calc(${left} + ${offset}px)`, 
-                      bottom: `calc(${bottom} + ${offset}px)` 
+                      bottom: `calc(${bottom} + ${offset}px)`,
+                      zIndex: isSelected ? 40 : (30 - rank) // prioritize higher ranked (smaller rank number) to be on top when overlapping
                     }}
-                    title={opp.name}
+                    title={`${rank}. ${opp.name} (Prioridad ${opp.priority})`}
                   >
+                    {rank}
                     {isPrintMode && (
                       <span className="absolute -top-6 left-1/2 -translate-x-1/2 bg-black/80 text-white text-[8px] px-1 py-0.5 rounded whitespace-nowrap opacity-0 group-hover:opacity-100">
                         {opp.name}

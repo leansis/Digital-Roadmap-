@@ -34,6 +34,14 @@ export const OpportunityList: React.FC<OpportunityListProps> = ({ data }) => {
     }
   };
 
+  const rankedOpportunities = useMemo(() => {
+    return [...data.opportunities].sort((a, b) => b.priority - a.priority);
+  }, [data.opportunities]);
+
+  const getRank = (oppId: string) => {
+    return rankedOpportunities.findIndex(o => o.id === oppId) + 1;
+  };
+
   const filteredAndSortedOpportunities = useMemo(() => {
     let result = [...data.opportunities];
 
@@ -212,13 +220,18 @@ export const OpportunityList: React.FC<OpportunityListProps> = ({ data }) => {
                   <td className="px-6 py-4 text-sm text-gray-600">{getProcessName(opp.processId)}</td>
                   <td className="px-6 py-4 text-sm text-gray-600">{opp.proposedBy || '-'}</td>
                   <td className="px-6 py-4 text-sm text-center">
-                    <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
-                      opp.priority >= 4 ? 'bg-red-100 text-red-700' : 
-                      opp.priority >= 3 ? 'bg-amber-100 text-amber-700' : 
-                      'bg-blue-100 text-blue-700'
-                    }`}>
-                      {opp.priority}
-                    </span>
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-800 text-white text-xs font-bold">
+                        {getRank(opp.id)}
+                      </span>
+                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+                        opp.priority >= 4 ? 'bg-red-50 text-red-700' : 
+                        opp.priority >= 3 ? 'bg-amber-50 text-amber-700' : 
+                        'bg-blue-50 text-blue-700'
+                      }`}>
+                        Score: {opp.priority}
+                      </span>
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-center font-semibold text-indigo-600">{opp.impact}</td>
                   <td className="px-6 py-4 text-sm text-center font-semibold text-indigo-600">{opp.difficulty}</td>

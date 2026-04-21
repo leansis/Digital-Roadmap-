@@ -87,10 +87,15 @@ export const RoadmapReport: React.FC<RoadmapReportProps> = ({ data, companyName 
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {sortedOpportunities.map((opp) => (
+                    {sortedOpportunities.map((opp, index) => (
                       <tr key={opp.id} className="hover:bg-gray-50 break-inside-avoid">
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-bold">
-                          {opp.priority}
+                          <div className="flex items-center gap-2">
+                             <div className="w-6 h-6 rounded-full bg-gray-800 text-white flex items-center justify-center text-xs">
+                               {index + 1}
+                             </div>
+                             <span className="text-gray-500 text-xs font-normal" title="Score">(Score: {opp.priority})</span>
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900 font-medium max-w-xs truncate">
                           {opp.name}
