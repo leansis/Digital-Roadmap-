@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc, getDoc, setDoc, collectionGroup } from 'firebase/firestore';
 import { db } from '../firebase';
 import { User } from 'firebase/auth';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
@@ -9,11 +9,14 @@ interface Company {
   id: string;
   name: string;
   updatedAt?: string;
+  ownerEmail?: string;
+  ownerId?: string;
+  path?: string;
 }
 
 interface CompanyManagerProps {
   user: User;
-  onSelect: (id: string, shared?: boolean) => void;
+  onSelect: (id: string, shared?: boolean, path?: string | null) => void;
   onLogout: () => void;
 }
 
@@ -32,39 +35,127 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ user, onSelect, 
   const isAdmin = userEmailLower === 'leansisproductivity@gmail.com';
 
   useEffect(() => {
-    // Listen to personal companies
-    const q = collection(db, 'users', user.uid, 'companies');
-    const unsubscribePersonal = onSnapshot(q, (snapshot) => {
-      const comps: Company[] = [];
-      snapshot.forEach(doc => {
-        comps.push({ id: doc.id, name: doc.data().name, updatedAt: doc.data().updatedAt });
-      });
-      comps.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
-      setCompanies(comps);
-      setLoading(false);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, `users/${user.uid}/companies`);
-      setLoading(false);
-    });
+    let unsubscribePersonal: (() => void) | undefined;
+    let unsubscribeAll: (() => void) | undefined;
 
-    // Listen to shared companies if SGS user or Admin
-    let unsubscribeShared: (() => void) | undefined;
-    if (isSGSUser || isAdmin) {
-      const sharedQ = collection(db, 'shared_companies');
-      unsubscribeShared = onSnapshot(sharedQ, (snapshot) => {
-        const comps: Company[] = [];
+    if (isAdmin) {
+      // Global admin sees all companies
+      const q = collectionGroup(db, 'companies');
+      unsubscribeAll = onSnapshot(q, (snapshot) => {
+        const rawComps: Company[] = [];
         snapshot.forEach(doc => {
-          comps.push({ id: doc.id, name: doc.data().name, updatedAt: doc.data().updatedAt });
+          let owner = doc.data().ownerEmail;
+          let extractedUserId = '';
+          const path = doc.ref.path || '';
+          
+          if (path.startsWith('users/')) {
+            extractedUserId = path.split('/')[1];
+          }
+
+          if (!owner) {
+             const opps = doc.data().opportunities;
+             if (Array.isArray(opps)) {
+                const oppWithEmail = opps.find(o => o.proposedBy && o.proposedBy.includes('@'));
+                if (oppWithEmail) {
+                   owner = oppWithEmail.proposedBy;
+                }
+             }
+          }
+          if (!owner && doc.data().sharedBy) {
+             owner = doc.data().sharedBy;
+          }
+          if (!owner) {
+             owner = extractedUserId ? `UID: ${extractedUserId.substring(0, 6)}...` : 'Usuario Anónimo';
+          }
+
+          rawComps.push({ 
+            id: doc.id, 
+            name: doc.data().name || 'Empresa sin nombre', 
+            updatedAt: doc.data().updatedAt,
+            ownerEmail: owner,
+            ownerId: doc.data().ownerId || extractedUserId,
+            path: path
+          });
         });
+        
+        rawComps.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+        
+        const seenNames = new Set<string>();
+        const comps: Company[] = [];
+        for (const c of rawComps) {
+          const nameLower = c.name.trim().toLowerCase();
+          if (!seenNames.has(nameLower)) {
+            seenNames.add(nameLower);
+            comps.push(c);
+          }
+        }
+
         setSharedCompanies(comps);
+        setLoading(false);
       }, (error) => {
-        console.error("Error loading shared companies:", error);
+        handleFirestoreError(error, OperationType.LIST, 'collectionGroup/companies');
+        setLoading(false);
       });
+      setCompanies([]);
+    } else {
+      // Regular user listens to their personal companies
+      const q = collection(db, 'users', user.uid, 'companies');
+      unsubscribePersonal = onSnapshot(q, (snapshot) => {
+        const rawComps: Company[] = [];
+        snapshot.forEach(doc => {
+          rawComps.push({ 
+            id: doc.id, 
+            name: doc.data().name, 
+            updatedAt: doc.data().updatedAt,
+            ownerEmail: doc.data().ownerEmail,
+            ownerId: doc.data().ownerId,
+            path: doc.ref.path
+          });
+        });
+        rawComps.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+        
+        const seenNames = new Set<string>();
+        const comps: Company[] = [];
+        for (const c of rawComps) {
+          const nameLower = c.name.trim().toLowerCase();
+          if (!seenNames.has(nameLower)) {
+            seenNames.add(nameLower);
+            comps.push(c);
+          }
+        }
+
+        setCompanies(comps);
+        setLoading(false);
+      }, (error) => {
+        handleFirestoreError(error, OperationType.LIST, `users/${user.uid}/companies`);
+        setLoading(false);
+      });
+
+      // SGS user sees shared companies
+      if (isSGSUser) {
+        const sharedQ = collection(db, 'shared_companies');
+        unsubscribeAll = onSnapshot(sharedQ, (snapshot) => {
+          const comps: Company[] = [];
+          snapshot.forEach(doc => {
+            comps.push({ 
+              id: doc.id, 
+              name: doc.data().name, 
+              updatedAt: doc.data().updatedAt,
+              ownerEmail: doc.data().ownerEmail,
+              ownerId: doc.data().ownerId,
+              path: doc.ref.path
+            });
+          });
+          setSharedCompanies(comps);
+        }, (error) => {
+          console.error("Error loading shared companies:", error);
+        });
+      }
     }
 
     return () => {
-      unsubscribePersonal();
-      if (unsubscribeShared) unsubscribeShared();
+      if (unsubscribePersonal) unsubscribePersonal();
+      if (unsubscribeAll) unsubscribeAll();
     };
   }, [user, isSGSUser, isAdmin]);
 
@@ -83,10 +174,12 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ user, onSelect, 
         opportunities: [],
         applications: [],
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+        ownerEmail: user.email,
+        ownerId: user.uid
       });
       setNewCompanyName('');
-      onSelect(newDoc.id); // Auto-select newly created company
+      onSelect(newDoc.id, false, newDoc.path); // Auto-select newly created company
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, `users/${user.uid}/companies`);
     } finally {
@@ -194,8 +287,8 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ user, onSelect, 
           {/* Shared Companies Section (Visible to SGS and Admins) */}
           {(isSGSUser || isAdmin) && sharedCompanies.map(company => (
             <div 
-              key={company.id}
-              onClick={() => onSelect(company.id, true)}
+              key={`shared-${company.id}`}
+              onClick={() => onSelect(company.id, true, company.path)}
               className="bg-indigo-600 rounded-xl border border-indigo-500 p-6 shadow-md hover:shadow-lg hover:bg-indigo-700 cursor-pointer transition-all flex flex-col relative group text-white"
             >
               <div className="flex items-start justify-between mb-4">
@@ -209,6 +302,11 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ user, onSelect, 
               <h3 className="text-xl font-bold mb-1 truncate" title={company.name}>
                 {company.name}
               </h3>
+              {isAdmin && (
+                <p className="text-xs text-indigo-100 italic opacity-80 mb-2 truncate" title={company.ownerEmail}>
+                  {company.ownerEmail}
+                </p>
+              )}
               <p className="text-sm text-indigo-100 mt-auto pt-4">
                 {isAdmin ? 'Acceso de administrador global' : 'Acceso corporativo para @sgs.com'}
               </p>
@@ -243,8 +341,8 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ user, onSelect, 
           {/* Personal Company Cards */}
           {personalCompanies.map(company => (
             <div 
-              key={company.id}
-              onClick={() => onSelect(company.id)}
+              key={`personal-${company.id}`}
+              onClick={() => onSelect(company.id, false, company.path)}
               className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md hover:border-indigo-300 cursor-pointer transition-all flex flex-col relative group"
             >
               <div className="flex items-start justify-between mb-4">
@@ -303,9 +401,16 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ user, onSelect, 
                   </button>
                 </div>
               ) : (
-                <h3 className="text-xl font-bold text-gray-900 mb-1 truncate" title={company.name}>
-                  {company.name}
-                </h3>
+                <>
+                  <h3 className="text-xl font-bold text-gray-900 mb-1 truncate" title={company.name}>
+                    {company.name}
+                  </h3>
+                  {company.ownerEmail && (
+                    <p className="text-xs text-gray-400 italic mb-2 truncate" title={company.ownerEmail}>
+                      {company.ownerEmail}
+                    </p>
+                  )}
+                </>
               )}
               <p className="text-sm text-gray-500 mt-auto pt-4">
                 Última actualización: {company.updatedAt ? new Date(company.updatedAt).toLocaleDateString() : 'N/A'}

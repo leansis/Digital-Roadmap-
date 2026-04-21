@@ -32,8 +32,7 @@ service cloud.firestore {
     function isAdmin() {
       return isAuthenticated() && 
              (request.auth.token.email != null && 
-              (request.auth.token.email.lower() == 'leansisproductivity@gmail.com' ||
-               request.auth.token.email.lower().matches(".*@sgs\\.com$")));
+              request.auth.token.email.lower() == 'leansisproductivity@gmail.com');
     }
 
     function isSGSUser() {
@@ -53,7 +52,9 @@ service cloud.firestore {
              (!('createdAt' in data) || data.createdAt is string) &&
              (!('isShared' in data) || data.isShared is bool) &&
              (!('sharedAt' in data) || data.sharedAt is string) &&
-             (!('sharedBy' in data) || data.sharedBy is string);
+             (!('sharedBy' in data) || data.sharedBy is string) &&
+             (!('ownerEmail' in data) || data.ownerEmail is string) &&
+             (!('ownerId' in data) || data.ownerId is string);
     }
 
     match /users/{userId} {
@@ -66,6 +67,10 @@ service cloud.firestore {
         allow update: if (isOwner(userId) || isAdmin()) && isValidCompanyData(request.resource.data);
         allow delete: if isOwner(userId) || isAdmin();
       }
+    }
+
+    match /{path=**}/companies/{companyId} {
+      allow read: if isAdmin();
     }
 
     match /shared_companies/{companyId} {

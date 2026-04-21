@@ -28,6 +28,7 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const [isSharedCompany, setIsSharedCompany] = useState(false);
+  const [companyPath, setCompanyPath] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState<string>('');
   const isRemoteUpdate = useRef(false);
 
@@ -57,9 +58,11 @@ export default function App() {
       return;
     }
 
-    const docRef = isSharedCompany 
-      ? doc(db, 'shared_companies', selectedCompanyId)
-      : doc(db, 'users', user.uid, 'companies', selectedCompanyId);
+    const docRef = companyPath
+      ? doc(db, companyPath)
+      : isSharedCompany 
+        ? doc(db, 'shared_companies', selectedCompanyId)
+        : doc(db, 'users', user.uid, 'companies', selectedCompanyId);
 
     const unsubscribe = onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
@@ -93,14 +96,16 @@ export default function App() {
 
     const saveData = async () => {
       try {
-        const docRef = isSharedCompany 
-          ? doc(db, 'shared_companies', selectedCompanyId)
-          : doc(db, 'users', user.uid, 'companies', selectedCompanyId);
+        const docRef = companyPath
+          ? doc(db, companyPath)
+          : isSharedCompany 
+            ? doc(db, 'shared_companies', selectedCompanyId)
+            : doc(db, 'users', user.uid, 'companies', selectedCompanyId);
         await setDoc(docRef, { ...data, name: companyName, updatedAt: new Date().toISOString() }, { merge: true });
       } catch (error) {
-        const path = isSharedCompany 
+        const path = companyPath || (isSharedCompany 
           ? `shared_companies/${selectedCompanyId}`
-          : `users/${user.uid}/companies/${selectedCompanyId}`;
+          : `users/${user.uid}/companies/${selectedCompanyId}`);
         handleFirestoreError(error, OperationType.WRITE, path);
       }
     };
@@ -117,9 +122,10 @@ export default function App() {
     }
   };
 
-  const handleSelectCompany = (id: string, shared: boolean = false) => {
+  const handleSelectCompany = (id: string, shared: boolean = false, path: string | null = null) => {
     setIsSharedCompany(shared);
     setSelectedCompanyId(id);
+    setCompanyPath(path);
   };
 
   const handleDataLoaded = (newData: AppData) => {
