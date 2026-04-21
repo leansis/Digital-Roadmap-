@@ -6,9 +6,10 @@ import { ChevronDiagram } from './components/ChevronDiagram';
 import { MasterData } from './components/MasterData';
 import { ImpactDifficultyMatrix } from './components/ImpactDifficultyMatrix';
 import { OpportunityList } from './components/OpportunityList';
+import { RoadmapReport } from './components/RoadmapReport';
 import { Auth } from './components/Auth';
 import { CompanyManager } from './components/CompanyManager';
-import { LayoutTemplate, TableProperties, Download, Database, Grid, LogOut, Building2, ArrowLeft, ClipboardList } from 'lucide-react';
+import { LayoutTemplate, TableProperties, Download, Database, Grid, LogOut, Building2, ArrowLeft, ClipboardList, FileText } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { auth, db } from './firebase';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
@@ -23,7 +24,7 @@ export default function App() {
     applications: []
   });
 
-  const [activeTab, setActiveTab] = useState<'diagram' | 'table' | 'matrix' | 'master' | 'list'>('diagram');
+  const [activeTab, setActiveTab] = useState<'diagram' | 'table' | 'matrix' | 'master' | 'list' | 'report'>('diagram');
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
@@ -244,9 +245,9 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-100 text-gray-900 font-sans overflow-hidden">
+    <div className="flex h-screen bg-gray-100 text-gray-900 font-sans overflow-hidden print:h-auto print:overflow-visible">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col shrink-0 z-20">
+      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col shrink-0 z-20 print:hidden">
         <div className="h-16 flex items-center px-4 border-b border-gray-200">
           <button 
             onClick={() => setSelectedCompanyId(null)}
@@ -300,6 +301,15 @@ export default function App() {
             Listado Oportunidades
           </button>
           <button
+            onClick={() => setActiveTab('report')}
+            className={`flex items-center justify-start w-full text-left gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === 'report' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+            }`}
+          >
+            <FileText className="w-5 h-5 shrink-0" />
+            Informe PDF
+          </button>
+          <button
             onClick={() => setActiveTab('master')}
             className={`flex items-center justify-start w-full text-left gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
               activeTab === 'master' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
@@ -321,8 +331,8 @@ export default function App() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="bg-white border-b border-gray-200 shadow-sm shrink-0 h-16 flex items-center justify-end px-6">
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden print:overflow-visible">
+        <header className="bg-white border-b border-gray-200 shadow-sm shrink-0 h-16 flex items-center justify-end px-6 print:hidden">
           <div className="flex items-center gap-4">
             {data.activities.length > 0 && (
               <div className="flex items-center gap-2">
@@ -340,16 +350,16 @@ export default function App() {
           </div>
         </header>
         
-        <div className="flex-1 overflow-hidden p-6">
+        <div className="flex-1 overflow-hidden p-6 print:p-0 print:overflow-visible text-gray-900">
           {data.activities.length === 0 && activeTab !== 'master' && (
-            <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 max-w-2xl mx-auto mt-10">
+            <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 max-w-2xl mx-auto mt-10 print:hidden">
               <h2 className="text-lg font-semibold mb-4">Cargar Datos</h2>
               <ExcelUploader onDataLoaded={handleDataLoaded} />
             </section>
           )}
 
           {(data.activities.length > 0 || activeTab === 'master') && (
-            <div className="h-full bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
+            <div className={`h-full bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden ${activeTab === 'report' ? 'print:border-none print:shadow-none' : ''}`}>
               {activeTab === 'diagram' && (
                 <ChevronDiagram 
                   data={data} 
@@ -366,6 +376,9 @@ export default function App() {
               )}
               {activeTab === 'list' && (
                 <OpportunityList data={data} />
+              )}
+              {activeTab === 'report' && (
+                <RoadmapReport data={data} companyName={companyName} />
               )}
               {activeTab === 'master' && (
                 <MasterData data={data} setData={setData} />
