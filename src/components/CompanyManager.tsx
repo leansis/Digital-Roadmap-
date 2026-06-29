@@ -4,6 +4,7 @@ import { db } from '../firebase';
 import { User } from 'firebase/auth';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 import { Building2, Plus, LogOut, Trash2, LayoutTemplate, Edit2, Check, X, Share2 } from 'lucide-react';
+import { UserManagement } from './UserManagement';
 
 interface Company {
   id: string;
@@ -29,10 +30,31 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ user, onSelect, 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const [isSharing, setIsSharing] = useState<string | null>(null);
+  const [view, setView] = useState<'companies' | 'users'>('companies');
 
   const userEmailLower = user.email?.toLowerCase();
   const isSGSUser = userEmailLower?.endsWith('@sgs.com');
-  const isAdmin = userEmailLower === 'leansisproductivity@gmail.com';
+  const isGlobalAdmin = userEmailLower === 'leansisproductivity@gmail.com';
+  
+  const [isAdmin, setIsAdmin] = useState(isGlobalAdmin);
+
+  useEffect(() => {
+    if (isGlobalAdmin) return;
+    
+    // Check if the user is in the admins collection
+    const checkAdmin = async () => {
+      try {
+        if (!userEmailLower) return;
+        const adminDoc = await getDoc(doc(db, 'admins', userEmailLower));
+        if (adminDoc.exists()) {
+          setIsAdmin(true);
+        }
+      } catch (err) {
+        console.error("Error verifying admin status:", err);
+      }
+    };
+    checkAdmin();
+  }, [userEmailLower, isGlobalAdmin]);
 
   useEffect(() => {
     let unsubscribePersonal: (() => void) | undefined;
@@ -266,6 +288,14 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ user, onSelect, 
           <h1 className="text-xl font-bold text-gray-900">Digital Roadmap</h1>
         </div>
         <div className="flex items-center gap-4">
+          {isAdmin && (
+            <button
+              onClick={() => setView(view === 'companies' ? 'users' : 'companies')}
+              className="px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors border border-indigo-200"
+            >
+              {view === 'companies' ? 'Gestionar Usuarios' : 'Volver a Empresas'}
+            </button>
+          )}
           <span className="text-sm text-gray-600">{user.email}</span>
           <button
             onClick={onLogout}
@@ -277,7 +307,10 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ user, onSelect, 
         </div>
       </header>
 
-      <main className="flex-1 max-w-5xl w-full mx-auto p-8">
+      {view === 'users' ? (
+        <UserManagement currentUserEmail={userEmailLower} />
+      ) : (
+        <main className="flex-1 max-w-5xl w-full mx-auto p-8">
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900">Mis Empresas</h2>
           <p className="text-gray-500 mt-1">Selecciona una empresa para gestionar su roadmap digital o crea una nueva.</p>
@@ -419,6 +452,7 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ user, onSelect, 
           ))}
         </div>
       </main>
+      )}
     </div>
   );
 };

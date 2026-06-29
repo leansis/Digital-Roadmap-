@@ -31,8 +31,10 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() && 
-             (request.auth.token.email != null && 
-              request.auth.token.email.lower() == 'leansisproductivity@gmail.com');
+             (
+               (request.auth.token.email != null && request.auth.token.email.lower() == 'leansisproductivity@gmail.com') ||
+               (request.auth.token.email != null && exists(/databases/$(database)/documents/admins/$(request.auth.token.email.lower())))
+             );
     }
 
     function isSGSUser() {
@@ -57,8 +59,13 @@ service cloud.firestore {
              (!('ownerId' in data) || data.ownerId is string);
     }
 
+    match /admins/{adminId} {
+      allow read: if isAdmin(); // only admins can read the admins list
+      allow write: if isAdmin();
+    }
+
     match /users/{userId} {
-      allow read: if isOwner(userId) || isAdmin();
+      allow read: if isOwner(userId) || isAdmin(); // users can only read themselves, admins can read all
       allow write: if isOwner(userId) || isAdmin();
       
       match /companies/{companyId} {
