@@ -5,6 +5,8 @@ import { User } from 'firebase/auth';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 import { Building2, Plus, LogOut, Trash2, LayoutTemplate, Edit2, Check, X, Share2 } from 'lucide-react';
 import { UserManagement } from './UserManagement';
+import { ChangePasswordModal } from './ChangePasswordModal';
+import { Key } from 'lucide-react';
 
 interface Company {
   id: string;
@@ -31,6 +33,7 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ user, onSelect, 
   const [editingName, setEditingName] = useState('');
   const [isSharing, setIsSharing] = useState<string | null>(null);
   const [view, setView] = useState<'companies' | 'users'>('companies');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   const userEmailLower = user.email?.toLowerCase();
   const isSGSUser = userEmailLower?.endsWith('@sgs.com');
@@ -298,14 +301,25 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ user, onSelect, 
           )}
           <span className="text-sm text-gray-600">{user.email}</span>
           <button
+            onClick={() => setIsChangingPassword(true)}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200"
+          >
+            <Key className="w-4 h-4" />
+            Cambiar Contraseña
+          </button>
+          <button
             onClick={onLogout}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
           >
             <LogOut className="w-4 h-4" />
             Cerrar Sesión
           </button>
         </div>
       </header>
+
+      {isChangingPassword && (
+        <ChangePasswordModal onClose={() => setIsChangingPassword(false)} />
+      )}
 
       {view === 'users' ? (
         <UserManagement currentUserEmail={userEmailLower} />
