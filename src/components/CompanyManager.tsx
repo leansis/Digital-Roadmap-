@@ -61,7 +61,7 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ user, onSelect, 
     let unsubscribeAll: (() => void) | undefined;
 
     if (isAdmin) {
-      // Global admin sees all companies
+      // Global admin sees all companies .
       const q = collectionGroup(db, 'companies');
       unsubscribeAll = onSnapshot(q, (snapshot) => {
         const rawComps: Company[] = [];
