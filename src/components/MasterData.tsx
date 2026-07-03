@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AppData } from '../types';
-import { Plus, Trash2, Edit2, Check, X, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, Trash2, Edit2, Check, X, ChevronUp, ChevronDown, ExternalLink } from 'lucide-react';
 
 interface MasterDataProps {
   data: AppData;
@@ -298,10 +298,21 @@ export function MasterData({ data, setData }: MasterDataProps) {
           <button onClick={() => setActiveTab('processes')} className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'processes' ? 'bg-indigo-100 text-indigo-700' : 'text-gray-600 hover:bg-gray-200'}`}>Procesos</button>
           <button onClick={() => setActiveTab('applications')} className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'applications' ? 'bg-indigo-100 text-indigo-700' : 'text-gray-600 hover:bg-gray-200'}`}>Aplicaciones</button>
         </div>
-        <button onClick={handleAdd} className="flex items-center gap-2 bg-indigo-600 text-white px-3 py-1.5 rounded-md hover:bg-indigo-700 transition-colors text-sm font-medium shadow-sm">
-          <Plus className="w-4 h-4" />
-          Añadir {activeTab === 'activities' ? 'Actividad' : activeTab === 'processes' ? 'Proceso' : 'Aplicación'}
-        </button>
+        <div className="flex items-center gap-3">
+          <a 
+            href="/apqc-pcf.html" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 bg-white text-gray-700 border border-gray-300 px-3 py-1.5 rounded-md hover:bg-gray-50 transition-colors text-sm font-medium shadow-sm"
+          >
+            <ExternalLink className="w-4 h-4" />
+            Inspirarse en APQC
+          </a>
+          <button onClick={handleAdd} className="flex items-center gap-2 bg-indigo-600 text-white px-3 py-1.5 rounded-md hover:bg-indigo-700 transition-colors text-sm font-medium shadow-sm">
+            <Plus className="w-4 h-4" />
+            Añadir {activeTab === 'activities' ? 'Actividad' : activeTab === 'processes' ? 'Proceso' : 'Aplicación'}
+          </button>
+        </div>
       </div>
       {renderTable()}
     </div>
