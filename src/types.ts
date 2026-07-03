@@ -19,6 +19,18 @@ export interface Process {
   applicationIds: string[];
 }
 
+export interface InformationCategories {
+  datosPersonales: boolean;
+  datosSensibles: boolean;
+  datosPenales: boolean;
+  datosFinancieros: boolean;
+  datosInternos: boolean;
+  datosInternosEspecificar?: string;
+  datosConfidenciales: boolean;
+  datosConfidencialesEspecificar?: string;
+  propiedadIntelectual: boolean;
+}
+
 export interface Opportunity {
   id: string;
   processId: string;
@@ -30,6 +42,7 @@ export interface Opportunity {
   proposedBy?: string;
   createdBy?: string;
   notes?: string;
+  informationCategories?: InformationCategories;
 }
 
 export interface AppData {

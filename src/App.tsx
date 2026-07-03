@@ -386,10 +386,10 @@ export default function App() {
                 <ImpactDifficultyMatrix data={data} />
               )}
               {activeTab === 'list' && (
-                <OpportunityList data={data} />
+                <OpportunityList data={data} setData={setData} />
               )}
               {activeTab === 'report' && (
-                <RoadmapReport data={data} companyName={companyName} />
+                <RoadmapReport data={data} companyName={companyName} setData={setData} />
               )}
               {activeTab === 'master' && (
                 <MasterData data={data} setData={setData} />

@@ -1,14 +1,18 @@
-import React, { useRef } from 'react';
-import { AppData } from '../types';
+import React, { useRef, useState } from 'react';
+import { AppData, Opportunity } from '../types';
 import { ImpactDifficultyMatrix } from './ImpactDifficultyMatrix';
-import { Printer } from 'lucide-react';
+import { Printer, Maximize2 } from 'lucide-react';
+import { OpportunityDetailsModal } from './OpportunityDetailsModal';
 
 interface RoadmapReportProps {
   data: AppData;
   companyName: string;
+  setData: React.Dispatch<React.SetStateAction<AppData>>;
 }
 
-export const RoadmapReport: React.FC<RoadmapReportProps> = ({ data, companyName }) => {
+export const RoadmapReport: React.FC<RoadmapReportProps> = ({ data, companyName, setData }) => {
+  const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
+
   const getProcessName = (processId: string) => {
     return data.processes.find(p => p.id === processId)?.name || 'Proceso Desconocido';
   };
@@ -97,8 +101,13 @@ export const RoadmapReport: React.FC<RoadmapReportProps> = ({ data, companyName 
                              <span className="text-gray-500 text-xs font-normal" title="Score">(Score: {opp.priority})</span>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-900 font-medium max-w-xs truncate">
-                          {opp.name}
+                        <td className="px-4 py-3 text-sm text-gray-900 font-medium max-w-xs">
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => setSelectedOpportunity(opp)} className="p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors shrink-0 print:hidden" title="Ver detalles">
+                              <Maximize2 className="w-4 h-4" />
+                            </button>
+                            <span className="truncate">{opp.name}</span>
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-500 max-w-xs truncate">
                           <span className="block text-xs font-bold text-gray-700">{getActivityName(opp.processId)}</span>
@@ -162,6 +171,20 @@ export const RoadmapReport: React.FC<RoadmapReportProps> = ({ data, companyName 
           }
         }
       `}</style>
+
+      {selectedOpportunity && (
+        <OpportunityDetailsModal
+          opportunity={selectedOpportunity}
+          onClose={() => setSelectedOpportunity(null)}
+          onSave={(updatedOpportunity) => {
+            setData(prev => ({
+              ...prev,
+              opportunities: prev.opportunities.map(o => o.id === updatedOpportunity.id ? updatedOpportunity : o)
+            }));
+            setSelectedOpportunity(null);
+          }}
+        />
+      )}
     </div>
   );
 };

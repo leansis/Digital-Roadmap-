@@ -1,19 +1,22 @@
 import React, { useState, useMemo } from 'react';
 import { AppData, Opportunity, OpportunityStatus } from '../types';
-import { ClipboardList, Search, Filter, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import { ClipboardList, Search, Filter, ArrowUp, ArrowDown, ArrowUpDown, Maximize2 } from 'lucide-react';
+import { OpportunityDetailsModal } from './OpportunityDetailsModal';
 
 interface OpportunityListProps {
   data: AppData;
+  setData: React.Dispatch<React.SetStateAction<AppData>>;
 }
 
 type SortField = 'name' | 'status' | 'activity' | 'process' | 'proposedBy' | 'priority' | 'impact' | 'difficulty';
 type SortDirection = 'asc' | 'desc';
 
-export const OpportunityList: React.FC<OpportunityListProps> = ({ data }) => {
+export const OpportunityList: React.FC<OpportunityListProps> = ({ data, setData }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<OpportunityStatus | 'Todos'>('Todos');
   const [sortField, setSortField] = useState<SortField>('priority');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
 
   const getProcessName = (processId: string) => {
     return data.processes.find(p => p.id === processId)?.name || 'N/A';
@@ -203,7 +206,14 @@ export const OpportunityList: React.FC<OpportunityListProps> = ({ data }) => {
             ) : (
               filteredAndSortedOpportunities.map((opp) => (
                 <tr key={opp.id} className="hover:bg-indigo-50/40 even:bg-gray-50/80 transition-colors">
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900">{opp.name}</td>
+                  <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => setSelectedOpportunity(opp)} className="p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors shrink-0" title="Ver detalles">
+                        <Maximize2 className="w-4 h-4" />
+                      </button>
+                      <span>{opp.name}</span>
+                    </div>
+                  </td>
                   <td className="px-6 py-4 text-sm">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                       opp.status === 'Finalizada' ? 'bg-emerald-100 text-emerald-800' :
@@ -244,6 +254,20 @@ export const OpportunityList: React.FC<OpportunityListProps> = ({ data }) => {
           </tbody>
         </table>
       </div>
+
+      {selectedOpportunity && (
+        <OpportunityDetailsModal
+          opportunity={selectedOpportunity}
+          onClose={() => setSelectedOpportunity(null)}
+          onSave={(updatedOpportunity) => {
+            setData(prev => ({
+              ...prev,
+              opportunities: prev.opportunities.map(o => o.id === updatedOpportunity.id ? updatedOpportunity : o)
+            }));
+            setSelectedOpportunity(null);
+          }}
+        />
+      )}
     </div>
   );
 };

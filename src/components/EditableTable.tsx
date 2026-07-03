@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { AppData, OpportunityStatus } from '../types';
-import { Plus, Trash2, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, ChevronsUpDown } from 'lucide-react';
+import { AppData, OpportunityStatus, Opportunity } from '../types';
+import { Plus, Trash2, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, ChevronsUpDown, Maximize2 } from 'lucide-react';
+import { OpportunityDetailsModal } from './OpportunityDetailsModal';
 
 import { User } from 'firebase/auth';
 
@@ -15,6 +16,7 @@ export function EditableTable({ data, setData, user }: EditableTableProps) {
   const [editValue, setEditValue] = useState<string | number>('');
   const [collapsedActivities, setCollapsedActivities] = useState<Set<string>>(new Set());
   const [appsCollapsed, setAppsCollapsed] = useState(true);
+  const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
 
   const isAllCollapsed = data.activities.length > 0 && collapsedActivities.size === data.activities.length;
 
@@ -597,6 +599,9 @@ export function EditableTable({ data, setData, user }: EditableTableProps) {
                       )}
                       <td className="p-2 border-r border-gray-200 align-top bg-white">
                         <div className="flex justify-between items-start group">
+                          <button onClick={() => setSelectedOpportunity(opp)} className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors mt-0.5" title="Ver detalles">
+                            <Maximize2 className="w-4 h-4"/>
+                          </button>
                           <div className="flex-1">{renderCell('opportunity', opp.id, 'name', opp.name)}</div>
                           <button onClick={() => handleDeleteOpportunity(opp.id)} className="p-1.5 text-gray-300 hover:text-red-600 hover:bg-red-50 rounded transition-colors mt-0.5" title="Eliminar Oportunidad"><Trash2 className="w-4 h-4"/></button>
                         </div>
@@ -615,6 +620,20 @@ export function EditableTable({ data, setData, user }: EditableTableProps) {
           </tbody>
         </table>
       </div>
+
+      {selectedOpportunity && (
+        <OpportunityDetailsModal
+          opportunity={selectedOpportunity}
+          onClose={() => setSelectedOpportunity(null)}
+          onSave={(updatedOpportunity) => {
+            setData(prev => ({
+              ...prev,
+              opportunities: prev.opportunities.map(o => o.id === updatedOpportunity.id ? updatedOpportunity : o)
+            }));
+            setSelectedOpportunity(null);
+          }}
+        />
+      )}
     </div>
   );
 }
