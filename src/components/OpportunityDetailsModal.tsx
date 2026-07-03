@@ -176,7 +176,7 @@ export const OpportunityDetailsModal: React.FC<OpportunityDetailsModalProps> = (
                   <span className="ml-2 text-sm text-gray-700">Datos financieros</span>
                 </label>
 
-                <div className="pl-6 space-y-2 border-l-2 border-gray-100 ml-2">
+                <div className="space-y-2">
                   <label className="flex items-center">
                     <input
                       type="checkbox"
@@ -197,7 +197,7 @@ export const OpportunityDetailsModal: React.FC<OpportunityDetailsModalProps> = (
                   )}
                 </div>
 
-                <div className="pl-6 space-y-2 border-l-2 border-gray-100 ml-2">
+                <div className="space-y-2">
                   <label className="flex items-center">
                     <input
                       type="checkbox"
