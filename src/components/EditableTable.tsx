@@ -179,12 +179,12 @@ export function EditableTable({ data, setData, user }: EditableTableProps) {
       ...prev,
       processes: prev.processes.map(p => {
         if (p.id !== processId) return p;
-        const hasApp = p.applicationIds.includes(appId);
+        const hasApp = (p.applicationIds || []).includes(appId);
         return {
           ...p,
           applicationIds: hasApp 
-            ? p.applicationIds.filter(id => id !== appId)
-            : [...p.applicationIds, appId]
+            ? (p.applicationIds || []).filter(id => id !== appId)
+            : [...(p.applicationIds || []), appId]
         };
       })
     }));
@@ -521,11 +521,11 @@ export function EditableTable({ data, setData, user }: EditableTableProps) {
                         </td>
                         {appsCollapsed ? (
                           <td className="p-2 border-r border-gray-200 align-middle bg-white text-sm text-gray-600 px-3 text-center">
-                            {process.applicationIds.map(id => data.applications.find(a => a.id === id)?.name).filter(Boolean).join(', ') || '-'}
+                            {(process.applicationIds || []).map(id => data.applications.find(a => a.id === id)?.name).filter(Boolean).join(', ') || '-'}
                           </td>
                         ) : (
                           data.applications.map(app => {
-                            const hasApp = process.applicationIds.includes(app.id);
+                            const hasApp = (process.applicationIds || []).includes(app.id);
                             return (
                               <td key={app.id} className="p-2 border-r border-gray-200 align-middle bg-white text-center cursor-pointer hover:bg-gray-50" onClick={() => toggleProcessApplication(process.id, app.id)}>
                                 <div className="flex justify-center">
@@ -581,11 +581,11 @@ export function EditableTable({ data, setData, user }: EditableTableProps) {
                           </td>
                           {appsCollapsed ? (
                             <td rowSpan={procRowSpan} className="p-2 border-r border-gray-200 align-middle bg-white text-sm text-gray-600 px-3 text-center">
-                              {process.applicationIds.map(id => data.applications.find(a => a.id === id)?.name).filter(Boolean).join(', ') || '-'}
+                              {(process.applicationIds || []).map(id => data.applications.find(a => a.id === id)?.name).filter(Boolean).join(', ') || '-'}
                             </td>
                           ) : (
                             data.applications.map(app => {
-                              const hasApp = process.applicationIds.includes(app.id);
+                              const hasApp = (process.applicationIds || []).includes(app.id);
                               return (
                                 <td key={app.id} rowSpan={procRowSpan} className="p-2 border-r border-gray-200 align-middle bg-white text-center cursor-pointer hover:bg-gray-50" onClick={() => toggleProcessApplication(process.id, app.id)}>
                                   <div className="flex justify-center">

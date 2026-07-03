@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AppData } from '../types';
-import { Plus, Trash2, Edit2, Check, X, ChevronUp, ChevronDown, ExternalLink } from 'lucide-react';
+import { Plus, Trash2, Edit2, Check, X, ChevronUp, ChevronDown, ExternalLink, Building2, Loader2 } from 'lucide-react';
 
 interface MasterDataProps {
   data: AppData;
@@ -11,6 +11,63 @@ export function MasterData({ data, setData }: MasterDataProps) {
   const [activeTab, setActiveTab] = useState<'activities' | 'processes' | 'applications'>('activities');
   const [editingCell, setEditingCell] = useState<{ id: string, field: string } | null>(null);
   const [editValue, setEditValue] = useState<string | number>('');
+
+  const [showCifModal, setShowCifModal] = useState(false);
+  const [cifValue, setCifValue] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleGenerateByCif = async () => {
+    if (!cifValue) return;
+    setIsGenerating(true);
+    try {
+      const response = await fetch('/api/generate-process-map', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cif: cifValue }),
+      });
+      if (response.ok) {
+        const result = await response.json();
+        if (result.activities && result.processes) {
+          const newActivities = result.activities.map((a: any, i: number) => ({
+            id: crypto.randomUUID(),
+            name: a.name,
+            order: data.activities.length + i,
+            _tempId: a.id
+          }));
+          const newProcesses = result.processes.map((p: any, i: number) => {
+            const parentActivity = newActivities.find((a: any) => a._tempId === p.activityId);
+            return {
+              id: crypto.randomUUID(),
+              activityId: parentActivity ? parentActivity.id : newActivities[0]?.id || data.activities[0]?.id,
+              name: p.name,
+              order: data.processes.length + i,
+              applicationIds: []
+            };
+          });
+          
+          const cleanActivities = newActivities.map((a: any) => {
+            const { _tempId, ...rest } = a;
+            return rest;
+          });
+
+          setData(prev => ({
+            ...prev,
+            activities: [...prev.activities, ...cleanActivities],
+            processes: [...prev.processes, ...newProcesses]
+          }));
+          setShowCifModal(false);
+          setCifValue('');
+        }
+      } else {
+        alert('Error al generar la propuesta. Inténtalo de nuevo.');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Error de conexión. Inténtalo de nuevo.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const startEdit = (id: string, field: string, currentValue: string | number) => {
     setEditingCell({ id, field });
@@ -78,7 +135,7 @@ export function MasterData({ data, setData }: MasterDataProps) {
         return {
           ...prev,
           applications: prev.applications.filter(a => a.id !== id),
-          processes: prev.processes.map(p => ({ ...p, applicationIds: p.applicationIds.filter(appId => appId !== id) }))
+          processes: prev.processes.map(p => ({ ...p, applicationIds: (p.applicationIds || []).filter(appId => appId !== id) }))
         };
       }
       if (activeTab === 'activities') {
@@ -299,6 +356,13 @@ export function MasterData({ data, setData }: MasterDataProps) {
           <button onClick={() => setActiveTab('applications')} className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'applications' ? 'bg-indigo-100 text-indigo-700' : 'text-gray-600 hover:bg-gray-200'}`}>Aplicaciones</button>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowCifModal(true)}
+            className="flex items-center gap-2 bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-md hover:bg-indigo-100 transition-colors text-sm font-medium shadow-sm"
+          >
+            <Building2 className="w-4 h-4" />
+            Propuesta por CIF
+          </button>
           <a 
             href="/apqc-pcf.html" 
             target="_blank" 
@@ -315,6 +379,56 @@ export function MasterData({ data, setData }: MasterDataProps) {
         </div>
       </div>
       {renderTable()}
+
+      {/* Modal Propuesta CIF */}
+      {showCifModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Generar Propuesta por CIF</h3>
+              <button onClick={() => setShowCifModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              Introduce el CIF de la empresa para generar automáticamente una propuesta de actividades y procesos basada en su sector.
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">CIF de la Empresa</label>
+              <input
+                type="text"
+                value={cifValue}
+                onChange={(e) => setCifValue(e.target.value)}
+                placeholder="Ej. B12345678"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowCifModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                disabled={isGenerating}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleGenerateByCif}
+                disabled={!cifValue || isGenerating}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Generando...
+                  </>
+                ) : (
+                  'Generar'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -196,7 +196,7 @@ export default function App() {
       
       activityProcesses.forEach(process => {
         const processOpportunities = data.opportunities.filter(o => o.processId === process.id);
-        const processApps = process.applicationIds.map(id => data.applications.find(a => a.id === id)?.name).filter(Boolean).join(', ');
+        const processApps = (process.applicationIds || []).map(id => data.applications.find(a => a.id === id)?.name).filter(Boolean).join(', ');
         
         if (processOpportunities.length === 0) {
           exportData.push({
@@ -374,9 +374,9 @@ export default function App() {
               {activeTab === 'diagram' && (
                 <ChevronDiagram 
                   data={data} 
-                  onAddOpportunity={handleAddOpportunity} 
                   onDeleteOpportunity={handleDeleteOpportunity}
                   user={user}
+                  setData={setData}
                 />
               )}
               {activeTab === 'table' && (

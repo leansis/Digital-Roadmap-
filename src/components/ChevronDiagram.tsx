@@ -1,16 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { AppData, Opportunity } from '../types';
-import { Plus, Trash2, AlertCircle, Lock } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, Lock, Maximize2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { User } from 'firebase/auth';
+import { OpportunityDetailsModal } from './OpportunityDetailsModal';
 
 const ADMIN_EMAIL = 'migcormar@gmail.com';
 
 interface ChevronDiagramProps {
   data: AppData;
-  onAddOpportunity: (processId: string) => void;
   onDeleteOpportunity: (id: string) => void;
   user: User | null;
+  setData: React.Dispatch<React.SetStateAction<AppData>>;
 }
 
 const PRIORITY_COLORS: Record<number, string> = {
@@ -21,7 +22,9 @@ const PRIORITY_COLORS: Record<number, string> = {
   5: 'bg-red-100 text-red-800 border-red-200',
 };
 
-export function ChevronDiagram({ data, onAddOpportunity, onDeleteOpportunity, user }: ChevronDiagramProps) {
+export function ChevronDiagram({ data, onDeleteOpportunity, user, setData }: ChevronDiagramProps) {
+  const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
+
   const sortedActivities = [...data.activities].sort((a, b) => a.order - b.order);
   const isAdmin = user?.email === ADMIN_EMAIL;
 
@@ -73,7 +76,7 @@ export function ChevronDiagram({ data, onAddOpportunity, onDeleteOpportunity, us
                         <h4 className="font-medium text-gray-800 leading-tight">{process.name}</h4>
                         {process.applicationIds && process.applicationIds.length > 0 && (
                           <p className="text-xs text-indigo-600 mt-1 font-medium bg-indigo-50 inline-block px-1.5 py-0.5 rounded">
-                            App: {process.applicationIds.map(id => data.applications.find(a => a.id === id)?.name).filter(Boolean).join(', ')}
+                            App: {(process.applicationIds || []).map(id => data.applications.find(a => a.id === id)?.name).filter(Boolean).join(', ')}
                           </p>
                         )}
                       </div>
@@ -83,7 +86,13 @@ export function ChevronDiagram({ data, onAddOpportunity, onDeleteOpportunity, us
                         {opps.map(opp => (
                           <div key={opp.id} className={cn("flex items-start justify-between p-2 rounded border text-sm", PRIORITY_COLORS[opp.priority] || PRIORITY_COLORS[3])}>
                             <div className="flex items-start gap-2">
-                              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                              <button 
+                                onClick={() => setSelectedOpportunity(opp)} 
+                                className="mt-0.5 text-gray-500 hover:text-indigo-700 transition-colors shrink-0" 
+                                title="Ver detalles"
+                              >
+                                <Maximize2 className="w-4 h-4" />
+                              </button>
                               <div className="flex flex-col">
                                 <div className="flex items-center gap-1.5">
                                   <span className="font-medium leading-tight">{opp.name}</span>
@@ -120,7 +129,25 @@ export function ChevronDiagram({ data, onAddOpportunity, onDeleteOpportunity, us
                       </div>
 
                       <button 
-                        onClick={() => onAddOpportunity(process.id)}
+                        onClick={() => {
+                          const newId = crypto.randomUUID();
+                          const newOpp = { 
+                            id: newId, 
+                            processId: process.id, 
+                            name: 'Nueva Oportunidad', 
+                            priority: 3,
+                            impact: 3,
+                            difficulty: 3,
+                            status: 'Planificado' as const,
+                            proposedBy: user?.displayName || user?.email || '',
+                            createdBy: user?.uid
+                          };
+                          setData(prev => ({
+                            ...prev,
+                            opportunities: [...prev.opportunities, newOpp]
+                          }));
+                          setSelectedOpportunity(newOpp);
+                        }}
                         className="flex items-center justify-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 py-1.5 rounded transition-colors mt-1 border border-dashed border-indigo-200"
                       >
                         <Plus className="w-3 h-3" />
@@ -134,6 +161,20 @@ export function ChevronDiagram({ data, onAddOpportunity, onDeleteOpportunity, us
           );
         })}
       </div>
+
+      {selectedOpportunity && (
+        <OpportunityDetailsModal
+          opportunity={selectedOpportunity}
+          onClose={() => setSelectedOpportunity(null)}
+          onSave={(updatedOpportunity) => {
+            setData(prev => ({
+              ...prev,
+              opportunities: prev.opportunities.map(o => o.id === updatedOpportunity.id ? updatedOpportunity : o)
+            }));
+            setSelectedOpportunity(null);
+          }}
+        />
+      )}
     </div>
   );
 }
