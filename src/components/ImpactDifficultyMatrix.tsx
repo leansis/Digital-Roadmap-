@@ -148,7 +148,7 @@ export const ImpactDifficultyMatrix: React.FC<ImpactDifficultyMatrixProps> = ({ 
                   <button
                     key={opp.id}
                     onClick={() => !isPrintMode && setSelectedOpp(opp)}
-                    className={`absolute ${dotSize} rounded-full border border-white transition-all transform flex items-center justify-center font-bold text-white shadow-sm ${!isPrintMode ? 'hover:scale-[1.3] hover:z-30' : 'print:border-white print:shadow-none bg-opacity-90'} ${
+                    className={`absolute ${dotSize} rounded-full border border-white transition-all transform flex items-center justify-center font-bold text-white shadow-sm pointer-events-auto ${!isPrintMode ? 'hover:scale-[1.3] hover:z-30 cursor-pointer' : 'print:border-white print:shadow-none bg-opacity-90'} ${
                       getStatusColor(opp.status, isSelected)
                     }`}
                     style={{ 
