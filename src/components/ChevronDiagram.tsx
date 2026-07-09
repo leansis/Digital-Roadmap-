@@ -56,7 +56,7 @@ export function ChevronDiagram({ data, onDeleteOpportunity, user, setData }: Che
                 index === 0 ? "chevron-first" : index === sortedActivities.length - 1 ? "chevron-last" : "chevron-middle",
                 sortedActivities.length === 1 && "chevron-single"
               )}>
-                <span className="truncate px-12 leading-tight">{activity.name}</span>
+                <span className="truncate px-12 leading-tight" title={activity.name}>{activity.name}</span>
                 <div 
                   className="absolute right-8 text-xs font-bold bg-white/20 w-6 h-6 flex items-center justify-center rounded-full shrink-0"
                   title={`${activityOppCount} ${activityOppCount === 1 ? 'iniciativa' : 'iniciativas'}`}
