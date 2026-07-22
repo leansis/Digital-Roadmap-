@@ -3,7 +3,7 @@ import { collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc, getDoc, setD
 import { db } from '../firebase';
 import { User } from 'firebase/auth';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
-import { Building2, Plus, LogOut, Trash2, LayoutTemplate, Edit2, Check, X, Share2 } from 'lucide-react';
+import { Building2, Plus, LogOut, Trash2, LayoutTemplate, Edit2, Check, X, Share2, AlertTriangle } from 'lucide-react';
 import { UserManagement } from './UserManagement';
 import { ChangePasswordModal } from './ChangePasswordModal';
 import { Key } from 'lucide-react';
@@ -34,6 +34,8 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ user, onSelect, 
   const [isSharing, setIsSharing] = useState<string | null>(null);
   const [view, setView] = useState<'companies' | 'users'>('companies');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const userEmailLower = user.email?.toLowerCase();
   const isSGSUser = userEmailLower?.endsWith('@sgs.com');
@@ -212,15 +214,34 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ user, onSelect, 
     }
   };
 
-  const handleDelete = async (e: React.MouseEvent, id: string, name: string) => {
+  const handleDeleteClick = (e: React.MouseEvent, company: Company) => {
     e.stopPropagation();
-    // Use a custom confirmation logic if needed, but for now we'll use a simple state-based or just rely on the user.
-    // Since we can't use window.confirm, we'll implement a quick inline confirm or just delete.
-    // To be safe, let's just delete for this prototype, or we could add a "confirmDeleteId" state.
+    setCompanyToDelete(company);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!companyToDelete) return;
+    setIsDeleting(true);
     try {
-      await deleteDoc(doc(db, 'users', user.uid, 'companies', id));
+      const { id, path } = companyToDelete;
+      if (path) {
+        await deleteDoc(doc(db, path));
+      } else {
+        await deleteDoc(doc(db, 'users', user.uid, 'companies', id));
+      }
+
+      // Also try to delete from shared_companies
+      try {
+        await deleteDoc(doc(db, 'shared_companies', id));
+      } catch (err) {
+        console.log("Could not delete from shared_companies or did not exist:", err);
+      }
+
+      setCompanyToDelete(null);
     } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `users/${user.uid}/companies/${id}`);
+      handleFirestoreError(error, OperationType.DELETE, companyToDelete.path || `users/${user.uid}/companies/${companyToDelete.id}`);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -342,8 +363,19 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ user, onSelect, 
                 <div className="w-12 h-12 bg-white/20 text-white rounded-lg flex items-center justify-center">
                   <Building2 className="w-6 h-6" />
                 </div>
-                <div className="px-2 py-1 bg-white/20 rounded text-[10px] font-bold uppercase tracking-wider">
-                  {isAdmin ? 'Empresa Global (SGS)' : 'Compartida (SGS)'}
+                <div className="flex items-center gap-2">
+                  {isAdmin && (
+                    <button
+                      onClick={(e) => handleDeleteClick(e, company)}
+                      className="p-1.5 bg-white/10 hover:bg-red-500 hover:text-white rounded-lg text-white transition-all shadow-sm"
+                      title="Eliminar empresa definitivamente"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                  <div className="px-2 py-1 bg-white/20 rounded text-[10px] font-bold uppercase tracking-wider">
+                    {isAdmin ? 'Empresa Global (SGS)' : 'Compartida (SGS)'}
+                  </div>
                 </div>
               </div>
               <h3 className="text-xl font-bold mb-1 truncate" title={company.name}>
@@ -416,7 +448,7 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ user, onSelect, 
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={(e) => handleDelete(e, company.id, company.name)}
+                    onClick={(e) => handleDeleteClick(e, company)}
                     className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
                     title="Eliminar empresa"
                   >
@@ -466,6 +498,54 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ user, onSelect, 
           ))}
         </div>
       </main>
+      )}
+
+      {/* Modal de Confirmación de Eliminación */}
+      {companyToDelete && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4 animate-fade-in" onClick={() => setCompanyToDelete(null)}>
+          <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl border border-gray-100 transform transition-all animate-scale-in" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start gap-4 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">¿Eliminar empresa definitivamente?</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Estás a punto de eliminar la empresa <strong className="text-gray-900">"{companyToDelete.name}"</strong>.
+                </p>
+                <p className="text-xs text-red-600 bg-red-50 p-2.5 rounded-lg border border-red-100 mt-3 font-medium">
+                  Atención: Esta acción borrará permanentemente todos los datos, actividades, procesos e iniciativas asociados a esta empresa. Esta acción no se puede deshacer.
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => setCompanyToDelete(null)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                disabled={isDeleting}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 transition-colors flex items-center gap-2"
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    Eliminando...
+                  </>
+                ) : (
+                  'Sí, eliminar empresa'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
